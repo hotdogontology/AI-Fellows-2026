@@ -9,9 +9,12 @@ from model import (
     DEFAULT_POPULATIONS,
     EXAMPLE_CHAINS,
     LEVELS,
+    POPULATION_MODELS,
     FoodChain,
+    apply_population_change,
     build_chain,
     build_explain_text,
+    validate_population_value,
 )
 
 
@@ -102,9 +105,44 @@ class FoodChainApp:
 
         tk.Label(
             self.left_frame,
-            text="Explain",
+            text="Dynamic Population Update",
             font=("TkDefaultFont", 10, "bold"),
         ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(12, 4))
+        row += 1
+
+        tk.Label(self.left_frame, text="Model:").grid(row=row, column=0, sticky="w", pady=2)
+        self.model_var = tk.StringVar(value="Balanced")
+        tk.OptionMenu(self.left_frame, self.model_var, *POPULATION_MODELS.keys()).grid(
+            row=row, column=1, sticky="ew", pady=2
+        )
+        row += 1
+
+        tk.Label(self.left_frame, text="Change Level:").grid(
+            row=row, column=0, sticky="w", pady=2
+        )
+        self.change_level_var = tk.StringVar(value="primary consumer")
+        tk.OptionMenu(self.left_frame, self.change_level_var, *LEVELS).grid(
+            row=row, column=1, sticky="ew", pady=2
+        )
+        row += 1
+
+        tk.Label(self.left_frame, text="New Value:").grid(row=row, column=0, sticky="w", pady=2)
+        self.change_value_entry = tk.Entry(self.left_frame, width=12)
+        self.change_value_entry.grid(row=row, column=1, sticky="w", pady=2)
+        row += 1
+
+        tk.Button(
+            self.left_frame,
+            text="Apply Change Across Web",
+            command=self.on_apply_population_change,
+        ).grid(row=row, column=0, columnspan=2, sticky="ew", pady=(4, 8))
+        row += 1
+
+        tk.Label(
+            self.left_frame,
+            text="Explain",
+            font=("TkDefaultFont", 10, "bold"),
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(8, 4))
         row += 1
 
         self.explain_label = tk.Label(
@@ -150,7 +188,53 @@ class FoodChainApp:
 
         self.current_chain = chain
         draw.draw_chain(self.canvas, chain.names, chain.populations)
-        self.explain_label.configure(text=build_explain_text(chain))
+        self.explain_label.configure(
+            text=build_explain_text(chain, model_name=self.model_var.get())
+        )
+
+    def on_apply_population_change(self) -> None:
+        """Apply a dynamic population update model after changing one level."""
+        if self.current_chain is None:
+            messagebox.showinfo("Build first", "Please build the food chain first.")
+            return
+
+        changed_level = self.change_level_var.get()
+        try:
+            new_value = validate_population_value(
+                self.change_value_entry.get(), changed_level
+            )
+        except ValueError as error:
+            messagebox.showerror("Input problem", str(error))
+            return
+
+        model_name = self.model_var.get()
+        try:
+            updated_populations = apply_population_change(
+                self.current_chain.populations,
+                changed_level,
+                new_value,
+                model_name,
+            )
+        except ValueError as error:
+            messagebox.showerror("Model problem", str(error))
+            return
+
+        self.current_chain.populations = updated_populations
+        for level in LEVELS:
+            self.population_entries[level].delete(0, tk.END)
+            self.population_entries[level].insert(0, str(updated_populations[level]))
+
+        draw.draw_chain(
+            self.canvas,
+            self.current_chain.names,
+            self.current_chain.populations,
+        )
+        self.explain_label.configure(
+            text=(
+                build_explain_text(self.current_chain, model_name=model_name)
+                + f"\nChanged {changed_level} to {new_value}, then updated linked levels."
+            )
+        )
 
     def on_reset(self) -> None:
         """Clear all input fields, explanation text, and drawing canvas."""
@@ -159,6 +243,10 @@ class FoodChainApp:
 
         for entry in self.population_entries.values():
             entry.delete(0, tk.END)
+
+        self.change_value_entry.delete(0, tk.END)
+        self.change_level_var.set("primary consumer")
+        self.model_var.set("Balanced")
 
         self.current_chain = None
         self.explain_label.configure(text="Build a chain to see an explanation.")
@@ -176,3 +264,4 @@ class FoodChainApp:
         for level in LEVELS:
             self.population_entries[level].delete(0, tk.END)
             self.population_entries[level].insert(0, str(DEFAULT_POPULATIONS[level]))
+
