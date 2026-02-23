@@ -7,9 +7,9 @@ from model import LEVELS, LEVEL_COLORS
 BOX_WIDTH = 320
 BOX_HEIGHT = 85
 LEFT_MARGIN = 30
-RIGHT_MARGIN = 240
-TOP_MARGIN = 30
-VERTICAL_SPACING = 35
+RIGHT_MARGIN = 300
+TOP_MARGIN = 24
+VERTICAL_SPACING = 34
 
 
 def clear_canvas(canvas) -> None:
@@ -21,19 +21,21 @@ def draw_chain(canvas, names: Dict[str, str], populations: Dict[str, int]) -> No
     """Draw the chain boxes, arrows, and population visuals on the canvas."""
     clear_canvas(canvas)
 
-    canvas_width = max(canvas.winfo_width(), 650)
+    canvas_width = max(canvas.winfo_width(), 900)
     x1 = LEFT_MARGIN
     x2 = min(x1 + BOX_WIDTH, canvas_width - RIGHT_MARGIN)
 
-    box_positions: List[Tuple[int, int, int, int]] = []
-    for index, level in enumerate(LEVELS):
+    level_order_for_rows = list(reversed(LEVELS))
+    positions_by_level: Dict[str, Tuple[int, int, int, int]] = {}
+
+    for index, level in enumerate(level_order_for_rows):
         y1 = TOP_MARGIN + index * (BOX_HEIGHT + VERTICAL_SPACING)
         y2 = y1 + BOX_HEIGHT
-        box_positions.append((x1, y1, x2, y2))
+        positions_by_level[level] = (x1, y1, x2, y2)
         draw_level_box(canvas, level, names[level], x1, y1, x2, y2)
 
-    draw_energy_arrows(canvas, box_positions)
-    draw_population_visuals(canvas, populations, box_positions)
+    draw_energy_arrows(canvas, positions_by_level)
+    draw_population_visuals(canvas, populations, positions_by_level)
     draw_population_legend(canvas, populations, canvas_width)
 
 
@@ -69,101 +71,152 @@ def draw_level_box(canvas, level: str, organism: str, x1: int, y1: int, x2: int,
     )
 
 
-def draw_energy_arrows(canvas, box_positions: List[Tuple[int, int, int, int]]) -> None:
-    """Draw arrows between levels with labels showing energy flow direction."""
-    for index in range(len(box_positions) - 1):
-        _, _, x2_top, y2_top = box_positions[index]
-        _, y1_bottom, x2_bottom, _ = box_positions[index + 1]
-        mid_x = (x2_top + x2_bottom) // 2
+def draw_energy_arrows(canvas, positions_by_level: Dict[str, Tuple[int, int, int, int]]) -> None:
+    """Draw centered arrows between levels showing upward energy flow."""
+    for index in range(len(LEVELS) - 1):
+        lower = LEVELS[index]
+        higher = LEVELS[index + 1]
+
+        x1_low, y1_low, x2_low, _ = positions_by_level[lower]
+        _, _, _, y2_high = positions_by_level[higher]
+        center_x = (x1_low + x2_low) // 2
 
         canvas.create_line(
-            mid_x,
-            y2_top,
-            mid_x,
-            y1_bottom,
+            center_x,
+            y1_low,
+            center_x,
+            y2_high,
             arrow="last",
             width=2,
             fill="#333333",
         )
         canvas.create_text(
-            mid_x + 65,
-            (y2_top + y1_bottom) // 2,
+            center_x,
+            (y1_low + y2_high) // 2,
             text="energy flow",
             fill="#333333",
             font=("TkDefaultFont", 9),
         )
 
 
-def draw_population_visuals(canvas, populations: Dict[str, int], box_positions) -> None:
-    """Draw a compact dot-grid population chart aligned with each level box."""
+def choose_square_unit(max_population: int) -> int:
+    """Choose square symbol unit size for compact population drawing."""
+    if max_population <= 200:
+        return 10
+    if max_population <= 1000:
+        return 50
+    if max_population <= 5000:
+        return 100
+    return 500
+
+
+def draw_population_visuals(
+    canvas,
+    populations: Dict[str, int],
+    positions_by_level: Dict[str, Tuple[int, int, int, int]],
+) -> None:
+    """Draw aligned population symbols without overlapping energy-flow labels."""
     max_population = max(populations.values()) if populations else 0
-    scale = choose_dot_scale(max_population)
+    square_unit = choose_square_unit(max_population)
 
-    for index, level in enumerate(LEVELS):
-        x1, y1, x2, y2 = box_positions[index]
-        dots_value = populations[level]
-        dot_count = 0 if dots_value == 0 else max(1, dots_value // scale)
-        if dots_value > 0 and dots_value % scale != 0:
-            dot_count += 1
-        dot_count = min(dot_count, 80)
+    for level in LEVELS:
+        _, y1, x2, y2 = positions_by_level[level]
+        symbol_x = x2 + 40
+        symbol_y = y1 + 12
 
-        draw_dot_grid(
+        draw_population_symbols(
             canvas,
-            start_x=x2 + 28,
-            start_y=y1 + 12,
-            dot_count=dot_count,
+            population=populations[level],
+            square_unit=square_unit,
+            start_x=symbol_x,
+            start_y=symbol_y,
             color=LEVEL_COLORS[level],
         )
 
         canvas.create_text(
-            x2 + 28,
-            y2 - 8,
+            symbol_x,
+            y2 - 10,
             anchor="w",
-            text=f"pop: {dots_value}",
+            text=f"pop: {populations[level]}",
             fill="#222222",
             font=("TkDefaultFont", 9),
         )
 
 
-def draw_dot_grid(canvas, start_x: int, start_y: int, dot_count: int, color: str) -> None:
-    """Draw small circles in a grid to represent population size."""
-    dot_size = 7
+def draw_population_symbols(
+    canvas,
+    population: int,
+    square_unit: int,
+    start_x: int,
+    start_y: int,
+    color: str,
+) -> None:
+    """Draw square symbols for grouped units and dot symbols for single units."""
+    squares = population // square_unit
+    remainder = population % square_unit
+
+    square_size = 8
+    dot_size = 5
     gap = 4
     per_row = 10
 
-    for index in range(dot_count):
+    max_symbols = 40
+    draw_squares = min(squares, max_symbols)
+
+    for index in range(draw_squares):
         row = index // per_row
         col = index % per_row
-        left = start_x + col * (dot_size + gap)
-        top = start_y + row * (dot_size + gap)
-        canvas.create_oval(
+        left = start_x + col * (square_size + gap)
+        top = start_y + row * (square_size + gap)
+        canvas.create_rectangle(
             left,
             top,
-            left + dot_size,
-            top + dot_size,
+            left + square_size,
+            top + square_size,
             fill=color,
             outline="",
         )
 
+    if squares > max_symbols:
+        canvas.create_text(
+            start_x,
+            start_y + 52,
+            anchor="w",
+            text=f"+ {squares - max_symbols} more",
+            fill="#444444",
+            font=("TkDefaultFont", 8),
+        )
 
-def choose_dot_scale(max_population: int) -> int:
-    """Choose a dot scaling value that keeps dot counts manageable."""
-    if max_population <= 120:
-        return 1
-    if max_population <= 500:
-        return 5
-    if max_population <= 1000:
-        return 10
-    if max_population <= 5000:
-        return 50
-    return 100
+    dot_start_y = start_y + 52
+    if remainder > 0:
+        draw_dots = min(remainder, 20)
+        for index in range(draw_dots):
+            left = start_x + index * (dot_size + gap)
+            canvas.create_oval(
+                left,
+                dot_start_y,
+                left + dot_size,
+                dot_start_y + dot_size,
+                fill=color,
+                outline="",
+            )
+
+        if remainder > 20:
+            canvas.create_text(
+                start_x + 125,
+                dot_start_y + 2,
+                anchor="w",
+                text=f"+{remainder - 20}",
+                fill="#444444",
+                font=("TkDefaultFont", 8),
+            )
 
 
 def draw_population_legend(canvas, populations: Dict[str, int], canvas_width: int) -> None:
-    """Draw color and scale legend for population visualization."""
-    scale = choose_dot_scale(max(populations.values()) if populations else 0)
-    legend_x = canvas_width - 220
-    legend_y = 18
+    """Draw color legend and unit legend for population visualization."""
+    square_unit = choose_square_unit(max(populations.values()) if populations else 0)
+    legend_x = canvas_width - 255
+    legend_y = 20
 
     canvas.create_text(
         legend_x,
@@ -197,7 +250,16 @@ def draw_population_legend(canvas, populations: Dict[str, int], canvas_width: in
         legend_x,
         legend_y + 108,
         anchor="w",
-        text=f"1 dot = {scale} individuals",
+        text=f"■ = {square_unit} individuals",
         fill="#222222",
         font=("TkDefaultFont", 9, "italic"),
     )
+    canvas.create_text(
+        legend_x,
+        legend_y + 126,
+        anchor="w",
+        text="• = 1 individual",
+        fill="#222222",
+        font=("TkDefaultFont", 9, "italic"),
+    )
+
