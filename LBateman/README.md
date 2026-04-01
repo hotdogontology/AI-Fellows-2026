@@ -1,62 +1,65 @@
 # Transcript PDF Bookmarker (Acrobat-friendly workflow)
 
-This utility is a lightweight alternative to writing a full Adobe Acrobat plugin.
-It creates bookmarks that Acrobat displays in the left navigation pane.
+This utility is a lightweight alternative to building a full Adobe Acrobat plugin.
+It creates a new PDF with standard bookmarks that Adobe Acrobat can display in the left navigation pane.
 
-## Non-technical friendly workflow (no terminal)
+## What the app does
 
-You now have a desktop app (`bookmark_transcripts_app.py`) with file pickers and buttons:
+The desktop app in `LBateman/transcript-app.py` gives a non-technical user two main actions:
 
-- **Preview Names**: detect likely student names and show pages.
-- **Create Bookmarked PDF**: generate the Acrobat-friendly bookmarked output PDF.
+- **Preview Names**: detect likely student names and show which page each one starts on.
+- **Create Bookmarked PDF**: generate a new PDF with Acrobat-compatible bookmarks.
 
-This means the end user does not need to run bash commands.
+The end user does not need to use the terminal once the app or `.exe` is built.
+
+## Adobe Acrobat compatibility
+
+This is not an Acrobat plugin. Instead, it writes standard PDF outline entries into a new output PDF.
+When that output file is opened in Adobe Acrobat, the bookmarks should appear in Acrobat's bookmarks pane.
 
 ## Build a shareable executable (.exe)
 
-On Windows (one-time build machine setup):
+Yes, Lisa can run this as a normal Windows executable once it has been built on a setup machine.
+
+On Windows:
 
 ```bash
-pip install pypdf pyinstaller
-pyinstaller --onefile --windowed --name TranscriptBookmarker transcript_bookmarker/bookmark_transcripts_app.py
+py -m pip install pypdf pyinstaller
+py -m PyInstaller --onefile --windowed --name TranscriptBookmarker LBateman/transcript-app.py
 ```
 
-After build, share:
+After the build finishes, share:
 
 - `dist/TranscriptBookmarker.exe`
 
-The recipient can double-click the executable and use the GUI.
+Lisa should be able to double-click `TranscriptBookmarker.exe` and use the GUI on her machine.
 
-## Concern addressed: false matches from transcript content
+Important:
 
-Yes—overly broad regex can accidentally match non-name content.
-This version adds safeguards:
+- `pypdf` must be installed before building if you want the app to create Acrobat-compatible bookmarked PDFs.
+- The app can still preview names without `pypdf` when text extraction is available, but PDF bookmark writing depends on `pypdf`.
 
-- Default extraction patterns are label-based (`Student Name: ...`) instead of broad free-text matching.
-- Candidates are filtered to reject digits and transcript vocabulary like `GPA`, `Credits`, `Course`, etc.
-- Optional `Required page regex` gate can restrict extraction to transcript pages only.
+## Detection safeguards
+
+Transcript content can accidentally look like a student name, so this version uses safer defaults:
+
+- Default extraction is based on transcript labels such as `Student Name`.
+- Candidate names are filtered to reject digits and common transcript field words.
+- An optional required-page regex can limit detection to transcript pages only.
+- The current sample transcript format is supported where `Student Name` appears on one line and the student name is on the next line.
 
 ## GUI usage
 
-1. Open `TranscriptBookmarker.exe` (or run `python transcript_bookmarker/bookmark_transcripts_app.py`).
-2. Select input transcript PDF.
-3. Select output PDF path.
-4. (Optional) adjust required-page regex.
-5. Click **Preview Names** and verify detection quality.
+1. Open `TranscriptBookmarker.exe`, or run `py LBateman/transcript-app.py`.
+2. Select the input transcript PDF.
+3. Select the output PDF path.
+4. Optionally adjust the required-page regex.
+5. Click **Preview Names** and verify the detected names.
 6. Click **Create Bookmarked PDF**.
-
-## CLI usage (still available)
-
-```bash
-python transcript_bookmarker/bookmark_transcripts.py \
-  --input class_transcripts.pdf \
-  --output class_transcripts_bookmarked.pdf \
-  --required-page-pattern "Transcript|Academic Record"
-```
+7. Open the generated PDF in Adobe Acrobat to confirm the bookmarks appear correctly.
 
 ## Notes and limitations
 
-- If pages are scanned images (no embedded text), run OCR first.
-- For district-specific formatting, customize name patterns and keep them label-based when possible.
+- If pages are scanned images with no embedded text, OCR is required first.
+- For district-specific transcript layouts, the regex patterns may need to be customized.
 - Current logic keeps the first page for each student and alphabetizes bookmarks by student name.
-
