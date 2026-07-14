@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>MarketQuest smoke test</title></head>
+  <body>
+    <iframe id="app" src="../index.html" hidden></iframe>
+    <pre id="result">RUNNING</pre>
+    <script>
+      window.addEventListener("load", () => {
+        const output = document.querySelector("#result");
+        try {
+          const doc = document.querySelector("#app").contentDocument;
+          doc.querySelector("#studentName").value = "Test Team";
+          doc.querySelector("#setupForm").requestSubmit();
+          if (doc.querySelector("#appContent").hidden) throw new Error("Setup did not open app");
+
+          doc.querySelector("#showAddStock").click();
+          doc.querySelector("#ticker").value = "TEST";
+          doc.querySelector("#companyName").value = "Test Company";
+          doc.querySelector("#shares").value = "10";
+          doc.querySelector("#purchasePrice").value = "100";
+          doc.querySelector("#purchaseDate").value = "2026-07-01";
+          doc.querySelector("#stockForm").requestSubmit();
+          if (doc.querySelector("#cashValue").textContent !== "$9,000.00") throw new Error("Purchase math failed");
+
+          doc.querySelector('[data-tab="daily"]').click();
+          doc.querySelector("#recordDate").value = "2026-07-02";
+          doc.querySelector(".close-price").value = "110";
+          doc.querySelector(".close-price").dispatchEvent(new Event("input", { bubbles: true }));
+          doc.querySelector("#dailyForm").requestSubmit();
+          if (doc.querySelector("#totalValue").textContent !== "$10,100.00") throw new Error("Daily portfolio math failed");
+
+          doc.querySelector('[data-tab="results"]').click();
+          if (!doc.querySelector("#chart svg")) throw new Error("Chart was not created");
+          output.textContent = "PASS: setup, purchase, daily close, totals, persistence render, and chart";
+        } catch (error) {
+          output.textContent = `FAIL: ${error.message}`;
+        }
+      });
+    </script>
+  </body>
+</html>

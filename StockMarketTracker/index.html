@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#183153" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>MarketQuest Portfolio Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <p class="eyebrow">CLASSROOM STOCK SIMULATOR</p>
+        <h1>MarketQuest</h1>
+      </div>
+      <button id="settingsButton" class="button button-quiet" type="button">Student settings</button>
+    </header>
+
+    <main>
+      <section id="welcomeCard" class="panel welcome" hidden>
+        <div>
+          <p class="eyebrow">WELCOME, INVESTOR</p>
+          <h2>Build your $10,000 portfolio</h2>
+          <p>Enter your name, choose stocks, then record each day's closing prices.</p>
+        </div>
+        <form id="setupForm" class="setup-grid">
+          <label>
+            Student or team name
+            <input id="studentName" maxlength="50" required placeholder="The Bull Market Team" />
+          </label>
+          <label>
+            Class period (optional)
+            <input id="classPeriod" maxlength="30" placeholder="Period 3" />
+          </label>
+          <button class="button button-primary" type="submit">Start investing</button>
+        </form>
+      </section>
+
+      <div id="appContent" hidden>
+        <section class="hero panel">
+          <div>
+            <p id="studentLabel" class="eyebrow"></p>
+            <h2>Your portfolio</h2>
+            <p id="asOfLabel" class="muted">Add your first investment to begin.</p>
+          </div>
+          <div class="metric main-metric">
+            <span>Total value</span>
+            <strong id="totalValue">$10,000.00</strong>
+            <small id="totalReturn" class="neutral">$0.00 (0.00%)</small>
+          </div>
+        </section>
+
+        <section class="metrics" aria-label="Portfolio summary">
+          <div class="panel metric"><span>Cash available</span><strong id="cashValue">$10,000.00</strong></div>
+          <div class="panel metric"><span>Money in stocks</span><strong id="investedValue">$0.00</strong></div>
+          <div class="panel metric"><span>Stocks owned</span><strong id="holdingCount">0</strong></div>
+        </section>
+
+        <nav class="tabs" aria-label="App sections">
+          <button class="tab active" data-tab="portfolio" type="button">Portfolio</button>
+          <button class="tab" data-tab="daily" type="button">Daily check-in</button>
+          <button class="tab" data-tab="results" type="button">Results</button>
+          <button class="tab" data-tab="data" type="button">Save & share</button>
+        </nav>
+
+        <section id="portfolioTab" class="tab-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">YOUR INVESTMENTS</p><h2>Stocks</h2></div>
+            <button id="showAddStock" class="button button-primary" type="button">+ Add a stock</button>
+          </div>
+
+          <form id="stockForm" class="panel form-card" hidden>
+            <div class="form-card-heading">
+              <div><h3>Purchase a stock</h3><p class="muted">Use the actual price from the day your class begins.</p></div>
+              <button id="cancelAddStock" class="icon-button" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="stock-grid">
+              <label>Ticker symbol<input id="ticker" required maxlength="8" autocomplete="off" placeholder="AAPL" /></label>
+              <label>Company name<input id="companyName" required maxlength="60" placeholder="Apple" /></label>
+              <label>Number of shares<input id="shares" required type="number" min="0.001" step="0.001" inputmode="decimal" placeholder="5" /></label>
+              <label>Price per share<input id="purchasePrice" required type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="190.25" /></label>
+              <label>Purchase date<input id="purchaseDate" required type="date" /></label>
+            </div>
+            <div class="purchase-preview"><span>Purchase cost</span><strong id="purchaseCost">$0.00</strong></div>
+            <p id="stockError" class="form-error" role="alert"></p>
+            <button class="button button-primary" type="submit">Buy stock</button>
+          </form>
+          <div id="holdingsList" class="holding-list"></div>
+        </section>
+
+        <section id="dailyTab" class="tab-panel" hidden>
+          <div class="section-heading">
+            <div><p class="eyebrow">MARKET CLOSE</p><h2>Daily check-in</h2><p class="muted">Enter the closing price, then decide whether to keep or sell.</p></div>
+          </div>
+          <form id="dailyForm" class="panel form-card">
+            <label class="date-label">Trading date<input id="recordDate" required type="date" /></label>
+            <div id="dailyStocks" class="daily-stocks"></div>
+            <label>Why did you make these choices? (optional)<textarea id="dailyReflection" maxlength="300" rows="3" placeholder="I kept this stock because…"></textarea></label>
+            <p id="dailyError" class="form-error" role="alert"></p>
+            <button id="saveDailyButton" class="button button-primary" type="submit">Save today's check-in</button>
+          </form>
+          <div class="section-heading compact"><div><p class="eyebrow">JOURNAL</p><h2>Past check-ins</h2></div></div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+
+        <section id="resultsTab" class="tab-panel" hidden>
+          <div class="section-heading"><div><p class="eyebrow">YOUR PROGRESS</p><h2>Gains and losses</h2><p class="muted">The line shows your total portfolio value, including cash.</p></div></div>
+          <div class="panel chart-card">
+            <div class="chart-legend"><span><i class="legend-line"></i>Portfolio value</span><span><i class="legend-dash"></i>$10,000 starting value</span></div>
+            <div id="chart" class="chart" role="img" aria-label="Portfolio value over time"></div>
+          </div>
+          <div id="resultsSummary" class="results-grid"></div>
+        </section>
+
+        <section id="dataTab" class="tab-panel" hidden>
+          <div class="section-heading"><div><p class="eyebrow">YOUR WORK</p><h2>Save and share</h2><p class="muted">This device saves automatically. Download a backup if you may switch devices.</p></div></div>
+          <div class="data-grid">
+            <article class="panel action-card"><h3>Spreadsheet</h3><p>Download daily results as a CSV file for Excel or Google Sheets.</p><button id="exportCsv" class="button button-secondary" type="button">Download CSV</button></article>
+            <article class="panel action-card"><h3>Backup file</h3><p>Download all portfolio data, or restore a previously saved backup.</p><div class="button-row"><button id="exportJson" class="button button-secondary" type="button">Download backup</button><label class="button button-secondary file-button">Restore backup<input id="importJson" type="file" accept="application/json,.json" /></label></div></article>
+            <article class="panel action-card danger-card"><h3>Start over</h3><p>Erase this portfolio from this browser. This cannot be undone.</p><button id="resetApp" class="button button-danger" type="button">Erase all data</button></article>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>MarketQuest uses student-entered prices for classroom learning. It does not provide investing advice.</footer>
+    <script src="app.js"></script>
+  </body>
+</html>

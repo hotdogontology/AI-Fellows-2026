@@ -1,0 +1,9 @@
+{
+  "name": "MarketQuest Portfolio Tracker",
+  "short_name": "MarketQuest",
+  "description": "A classroom stock-market portfolio tracker.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#183153"
+}
